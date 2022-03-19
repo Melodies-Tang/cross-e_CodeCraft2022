@@ -1,6 +1,6 @@
 import os
 import input
-
+import random
 
 def getDemand(elem):
     return elem[1]
@@ -37,34 +37,49 @@ if __name__ == '__main__':
     for time, demand in enumerate(demands):
         # demand form:: client:demand
         cur_client_demand = list(demand.items())  # each element: (client, band demand)
-        cur_client_demand.sort(key=getDemand, reverse=True)  # sort by band
-        capacity = site_bandwidth.copy()  # remained capacity for current time
-        cur_assign = dict()
-        for client, band in cur_client_demand:
-            client_assign = cur_assign[client] = dict()
-            if band == 0:  # zero requirement
-                continue
-            available_sites = client_site[client]
-            total_cnt = len(available_sites)  # available sites for current client
-            while total_cnt > 0 and band > 0:
-                cnt = total_cnt
-                for site in available_sites:
-                    avg = max(band // cnt, 1)  # rolling average
-                    cur = min(band // cnt, capacity[site])  # real assign
-                    if cur == 0:  # this site cannot provide bandwidth
-                        total_cnt -= 1
-                        cnt -= 1
-                        continue
-                    capacity[site] -= cur
-                    used[site][time] += cur
-                    band -= cur
+        # cur_client_demand.sort(key=getDemand, reverse=True)  # sort by band
+        solved = False
+        while not solved:
+            random.shuffle(cur_client_demand)
+            capacity = site_bandwidth.copy()  # remained capacity for current time
+            cur_assign = dict()
+            valid = True
+            for client, band in cur_client_demand:
+                client_assign = cur_assign[client] = dict()
+                if band == 0:  # zero requirement
+                    continue
+                available_sites = client_site[client]
+                total_cnt = len(available_sites)  # available sites for current client
+                cur_use = dict()
+                for site in site_names:
+                    cur_use[site] = 0
+                while total_cnt > 0 and band > 0:
+                    cnt = total_cnt
+                    for site in available_sites:
+                        avg = max(band // cnt, 1)  # rolling average
+                        cur = min(band // cnt, capacity[site])  # real assign
+                        if cur == 0:  # this site cannot provide bandwidth
+                            total_cnt -= 1
+                            cnt -= 1
+                            continue
+                        capacity[site] -= cur
+                        cur_use[site] += cur
+                        band -= cur
 
-                    if not client_assign.__contains__(site):
-                        client_assign[site] = cur
-                    else:
-                        client_assign[site] += cur
-                    cnt -= 1
-        assigns.append(cur_assign)
+                        if not client_assign.__contains__(site):
+                            client_assign[site] = cur
+                        else:
+                            client_assign[site] += cur
+                        cnt -= 1
+                        if cnt == 0:
+                            break
+                    if total_cnt == 0 and band != 0:
+                        valid = False
+            if valid:
+                assigns.append(cur_assign)
+                for site, use in cur_use.items():
+                    used[site][time] = use
+                solved = True
 
     total_cost = 0
     pos = int(len(demands) * 0.95)
