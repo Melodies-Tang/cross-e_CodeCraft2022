@@ -1,8 +1,10 @@
 import IO
 import random
 
-
-# import visualization
+root_path = "/"
+# root_path = "/home/melodies/HWcom/SDK/SDK_python/"
+data_path = root_path + "data/"
+output_path = root_path + "output/"
 
 
 def getDemand(elem):
@@ -13,13 +15,53 @@ def sortByTime(elem):
     return elem[0]
 
 
-root_path = "/"
-# root_path = "/home/melodies/HWcom/SDK/SDK_python/"
-data_path = root_path + "data/"
-output_path = root_path + "output/"
+def assignOneClient(band, sites, site_capacity):  # fulfill band demand of cur client and return feasibility
+    client_assign = dict()
+    while len(sites) > 0 and band > 0:  # assign band to sites
+        for idx, site in enumerate(sites):
+            avg = max(1, band // (len(sites) - idx))
+            cur = min(avg, site_capacity[site])  # real assign
+            if cur == 0:
+                continue
+            site_capacity[site] -= cur
+            site_band_used[site] = site_band_used.get(site, 0) + cur
+            client_assign[site] = client_assign.get(site, 0) + cur
+            band -= cur
+
+            if band == 0:  # checked if demand satisfied
+                break
+
+        sites = [site for site in sites if site_capacity[site] > 0]  # delete sites with no capacity
+        if len(sites) == 0 and band > 0:  # no solution, return for shuffle and solve again (for all clients)
+            return False, dict()
+    return True, client_assign
+
+
+def solveDispatch(site_capacity):
+    # initialize record for solution of this time
+    """
+    site_capacity: remained capacity of current time slot
+    site_band_used: band usage of each site
+    client_site_band: assignment result of each client
+    client_assign: result of single client
+    """
+    for client, band in client_demand_current:  # handle single client
+        if band == 0:  # zero requirement
+            client_site_band[client] = dict()
+            continue
+
+        available_sites = list(client_site[client])
+        random.shuffle(available_sites)
+        valid, client_assign = assignOneClient(band, available_sites, site_capacity)
+        if not valid:
+            return False, dict(), dict()
+        else:
+            client_site_band[client] = client_assign
+    return True
+
 
 if __name__ == '__main__':
-    '''
+    """
     N: number of sites
     M: number of clients
     QoS: configuration for connectivity
@@ -27,7 +69,7 @@ if __name__ == '__main__':
     demands: [[name:demand_t for name in client_names] for t in times (index)]
     graph: bilateral connectivity between sites and clients 
     used: [[band_used_t for t in times] indexed by server name]
-    '''
+    """
     N, site_bandwidth = IO.getSiteInfo(data_path)
     M, demands, time_names = IO.getClientInfo(data_path)
     QoS = IO.getConfig(data_path)
@@ -38,10 +80,6 @@ if __name__ == '__main__':
 
     POS_95 = int(times * 0.95)  # index start by 0
     special_num = times - POS_95 - 2
-    special_chance = dict()
-    if special_num > 0:
-        for site in site_names:
-            special_chance[site] = special_num
 
     used = dict()  # site:time(index):total_usage, for sake of calculating COST
     for site in site_names:
@@ -50,77 +88,28 @@ if __name__ == '__main__':
 
     for time, demand in enumerate(demands):
         # demand form:: client:demand
-        cur_client_demand = list(demand.items())  # each element: (client, band demand)
-        cur_client_demand.sort(key=getDemand, reverse=True)  # sort by band
+        client_demand_current = list(demand.items())  # each element: (client, band demand)
+        client_demand_current.sort(key=getDemand, reverse=True)  # handle client with higher demand first
         solved = False  # mark the solution for current time
-
         while not solved:  # solve the assignment for ONE TIME
-            # reset assignment and sp
-            use_special = dict()  # can only use once for current time
-            capacity = site_bandwidth.copy()  # remained capacity for current time
-            cur_assign = dict()
-
-            for client, band in cur_client_demand:  # handle single client
-                valid = True
-                client_assign = cur_assign[client] = dict()
-                if band == 0:  # zero requirement
-                    continue
-                available_sites = list(client_site[client])
-                random.shuffle(available_sites)
-                cur_use = dict()
-                for site in site_names:
-                    cur_use[site] = 0
-
-                while len(available_sites) > 0 and band > 0:  # assign band to sites
-                    for idx, site in enumerate(available_sites):
-                        avg = max(1, band // (len(available_sites) - idx))
-                        if special_chance[site] > 0 and random.randint(0, 10) < 3:
-                            cur = min(capacity[site], band)  # maximize the usage
-                            use_special[site] = True
-                        else:
-                            cur = min(avg, capacity[site])  # real assign
-
-                        if cur == 0:
-                            continue
-                        capacity[site] -= cur
-                        cur_use[site] += cur
-                        band -= cur
-
-                        if not client_assign.__contains__(site):
-                            client_assign[site] = cur
-                        else:
-                            client_assign[site] += cur
-
-                        if band == 0:  # checked if demand satisfied
-                            break
-
-                    available_sites = [site for site in available_sites if capacity[site] > 0]
-                    if len(available_sites) == 0 and band > 0:  # no solution, shuffle and solve again (for all clients)
-                        valid = False
-
-                if not valid:
-                    break  # jump out current demandS
-
-            if valid:  # copy to final solution
-                assigns.append(cur_assign)
-                for site, use in cur_use.items():
+            client_site_band = dict()
+            site_band_used = dict()
+            solved = solveDispatch(site_bandwidth.copy())
+            if solved:  # copy to final solution
+                assigns.append(client_site_band)
+                for site, use in site_band_used.items():
                     used[site][time] = use
-                for site in use_special.keys():
-                    special_chance[site] -= 1
-                solved = True
             else:
-                random.shuffle(cur_client_demand)
-                # print("Client: {} {} not satisfied".format(client, band))
+                random.shuffle(client_demand_current)
 
-    # total_cost = 0
-    # plot = []
-    # for site, usage in used.items():
-    #     usage.sort()
-    #     plot.append(usage)
-    #     total_cost += usage[POS_95]
-    # visualization.draw(plot)
+    total_cost = 0
+    for site, usage in used.items():
+        usage.sort()
+        total_cost += usage[POS_95]
 
     assigns = [[time_names[i], assigns[i]] for i in range(times)]
     assigns.sort(key=sortByTime)
-    assigns = [assigns[i][1:] for i in range(times)]
-    IO.writeOutput(output_path, assigns)
+    assigns = [assigns[i][1] for i in range(times)]
+    solution = [assigns, total_cost, used, POS_95]
+    # moveBandwidth(solution, total_cost, demands, site_bandwidth, site_client, client_site)
+    IO.writeOutput(output_path, solution[0])
