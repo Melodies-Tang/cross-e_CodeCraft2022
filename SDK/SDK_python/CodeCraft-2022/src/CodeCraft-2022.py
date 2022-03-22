@@ -1,8 +1,9 @@
 import IO
+import KM
 import random
 
-root_path = "/"
-# root_path = "/home/melodies/HWcom/SDK/SDK_python/"
+# root_path = "/"
+root_path = "/home/melodies/cross-e_CodeCraft2022/SDK/SDK_python/"
 data_path = root_path + "data/"
 output_path = root_path + "output/"
 
@@ -79,13 +80,14 @@ if __name__ == '__main__':
     times = len(demands)
 
     POS_95 = int(times * 0.95)  # index start by 0
-    special_num = times - POS_95 - 2
+    special_num = times - POS_95 - 2  # TRY
 
     used = dict()  # site:time(index):total_usage, for sake of calculating COST
     for site in site_names:
         used[site] = [0 for t in range(times)]
     assigns = []  # time(index):client:site:band_assigned, for solution
 
+    # solve demands for all times
     for time, demand in enumerate(demands):
         # demand form:: client:demand
         client_demand_current = list(demand.items())  # each element: (client, band demand)
@@ -104,12 +106,15 @@ if __name__ == '__main__':
 
     total_cost = 0
     for site, usage in used.items():
-        usage.sort()
+        cur = sorted(usage)
         total_cost += usage[POS_95]
 
     assigns = [[time_names[i], assigns[i]] for i in range(times)]
     assigns.sort(key=sortByTime)
     assigns = [assigns[i][1] for i in range(times)]
-    solution = [assigns, total_cost, used, POS_95]
-    # moveBandwidth(solution, total_cost, demands, site_bandwidth, site_client, client_site)
-    IO.writeOutput(output_path, solution[0])
+    site_chances = [special_num for i in range(N)]
+    solution = [assigns, total_cost, used, POS_95, site_chances]
+    new_solution = [assigns, total_cost, used, POS_95, site_chances]  # HOW TO DEEPCOPY???
+    new_cost = KM.evaluate(new_solution, demands, site_bandwidth, site_client, client_site)
+
+    IO.writeOutput(output_path, new_solution[0])
