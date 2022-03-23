@@ -25,7 +25,7 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
     N = len(site_bandwidth)
     site_name = [site for site in site_bandwidth.keys()]  # idx->site name
     T = len(demands)  # number of slots
-    chance = int(T * 0.05)
+    chance = max(site_chances)
     total_chance = chance * N
     matrix_size = max(T, total_chance)  # row:site_chance_idx  col:time_idx
     evaluation = [[0 for i in range(matrix_size)] for j in range(matrix_size)]  # fill with 0
@@ -65,6 +65,7 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
             potential -= add
             relative_site_cnt = len(time_client_site_band[time][client]) - 1
             j = 0
+            del_site = []
             for site, band in time_client_site_band[time][client].items():
                 if site != add_to_site_name:
                     site_avg_minus = add // (relative_site_cnt - j)
@@ -72,9 +73,13 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
                         site_avg_minus += 1
                     minus = min(site_avg_minus, band)
                     time_client_site_band[time][client][site] -= minus
+                    if time_client_site_band[time][client][site] == 0:
+                        del_site.append(site)
                     site_time_used[site][time] -= minus
                     add -= minus
                     j += 1
+            for site in del_site:
+                time_client_site_band[time][client].pop(site)
 
     total_cost = 0
     for site, usage in site_time_used.items():
