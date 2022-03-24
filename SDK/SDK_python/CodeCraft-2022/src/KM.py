@@ -1,3 +1,5 @@
+import time as tt
+
 def findPath(x, N, weights, optimal_match, label_x, label_y, visit_x, visit_y, slack):
     visit_x[x] = True
 
@@ -48,7 +50,10 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
             evaluation[row][:T] = site_potential_list.copy() if i < site_chances[site_idx] else zeros.copy()
             row += 1
 
+    start = tt.time()
     time_site = KM(evaluation)  # time_site[i]: the site(idx) that time_i use the max
+    end  = tt.time()
+    print(end - start)
     # reassign
     for time in range(T):
         add_to_site_idx = time_site[time]
@@ -59,8 +64,9 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
         client_cnt = len(site_client[add_to_site_name])
         for i, client in enumerate(site_client[add_to_site_name]):
             client_avg_add = potential // (client_cnt - i)
-            add = min(client_avg_add, demands[time][client] - time_client_site_band[time][client][add_to_site_name])
-            time_client_site_band[time][client][add_to_site_name] += add
+            current_assign = time_client_site_band[time][client].get(add_to_site_name, 0)
+            add = min(client_avg_add, demands[time][client] - current_assign)
+            time_client_site_band[time][client][add_to_site_name] = current_assign + add
             site_time_used[add_to_site_name][time] += add
             potential -= add
             relative_site_cnt = len(time_client_site_band[time][client]) - 1
@@ -84,7 +90,7 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
     total_cost = 0
     for site, usage in site_time_used.items():
         cur = sorted(usage)
-        total_cost += usage[POS_95]
+        total_cost += cur[POS_95]
     return total_cost
 
 

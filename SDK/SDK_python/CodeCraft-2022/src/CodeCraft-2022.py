@@ -1,9 +1,10 @@
+import math
 import IO
 import KM
 import random
 
 # root_path = "/"
-root_path = "/home/melodies/cross-e_CodeCraft2022/SDK/SDK_python/"
+root_path = "/home/xia/C++_projects/cross-e_CodeCraft2022/SDK/SDK_python/"
 data_path = root_path + "data/"
 output_path = root_path + "output/"
 
@@ -79,41 +80,41 @@ if __name__ == '__main__':
     client_names = demands[0].keys()
     times = len(demands)
 
-    POS_95 = int(times * 0.95)  # index start by 0
-    special_num = times - POS_95 - 2  # TRY
+    POS_95 = math.ceil(times * 0.95) - 1  # index start by 0
+    special_num = times - POS_95 - 1  # TRY
 
     used = dict()  # site:time(index):total_usage, for sake of calculating COST
     for site in site_names:
         used[site] = [0 for t in range(times)]
-    # assigns = []  # [time]client:site:band_assigned, for solution
-    #
-    # # solve demands for all times
-    # for time, demand in enumerate(demands):
-    #     # demand form:: client:demand
-    #     client_demand_current = list(demand.items())  # each element: (client, band demand)
-    #     client_demand_current.sort(key=getDemand, reverse=True)  # handle client with higher demand first
-    #     solved = False  # mark the solution for current time
-    #     while not solved:  # solve the assignment for ONE TIME
-    #         client_site_band = dict()
-    #         site_band_used = dict()
-    #         solved = solveDispatch(site_bandwidth.copy())
-    #         if solved:  # copy to final solution
-    #             assigns.append(client_site_band)
-    #             for site, use in site_band_used.items():
-    #                 used[site][time] = use
-    #         else:
-    #             random.shuffle(client_demand_current)
+    assigns = []  # [time]client:site:band_assigned, for solution
+    
+    # solve demands for all times
+    for time, demand in enumerate(demands):
+        # demand form:: client:demand
+        client_demand_current = list(demand.items())  # each element: (client, band demand)
+        client_demand_current.sort(key=getDemand, reverse=True)  # handle client with higher demand first
+        solved = False  # mark the solution for current time
+        while not solved:  # solve the assignment for ONE TIME
+            client_site_band = dict()
+            site_band_used = dict()
+            solved = solveDispatch(site_bandwidth.copy())
+            if solved:  # copy to final solution
+                assigns.append(client_site_band)
+                for site, use in site_band_used.items():
+                    used[site][time] = use
+            else:
+                random.shuffle(client_demand_current)
 
     total_cost = 0
     for site, usage in used.items():
         cur = sorted(usage)
-        total_cost += usage[POS_95]
+        total_cost += cur[POS_95]
 
-    empty = {}.fromkeys(client_names, dict())
-    assigns = [empty.copy() for t in range(times)]
-    # assigns = [[time_names[i], assigns[i]] for i in range(times)]
-    # assigns.sort(key=sortByTime)
-    # assigns = [assigns[i][1] for i in range(times)]
+    # empty = {}.fromkeys(client_names, dict())
+    # assigns = [empty.copy() for t in range(times)]
+    assigns = [[time_names[i], assigns[i]] for i in range(times)]
+    assigns.sort(key=sortByTime)
+    assigns = [assigns[i][1] for i in range(times)]
     site_chances = [special_num for i in range(N)]
     solution = [assigns, total_cost, used, POS_95, site_chances]
     new_solution = [assigns, total_cost, used, POS_95, site_chances]  # HOW TO DEEPCOPY???
