@@ -12,13 +12,98 @@ sname_map = {}
 
 
 class IOFile():
-    suffix = '_ori'
-    demand = f'data{suffix}/demand.csv'
-    qos = f'data{suffix}/qos.csv'
-    bandwidth = f'data{suffix}/site_bandwidth.csv'
-    config = f'data{suffix}/config.ini'
-    output = 'output/solution.txt'
+    # prefix = '/home/xia/C++_projects/cross-e_CodeCraft2022/SDK/SDK_python/'
+    prefix = ''
+    suffix = ''
+    demand = f'{prefix}data{suffix}/demand.csv'
+    qos = f'{prefix}data{suffix}/qos.csv'
+    bandwidth = f'{prefix}data{suffix}/site_bandwidth.csv'
+    config = f'{prefix}data{suffix}/config.ini'
+    output = f'{prefix}output/solution.txt'
 
+
+# def read_demand() -> Tuple[List[str], List[int]]:
+#     fname = IOFile.demand
+#     with open(fname) as f:
+#         data = f.read().splitlines()
+#     client_name = data[0].split(',')[1:]
+#     client_demand = []
+#     time_label = []
+#     for each in data[1:]:
+#         d = each.split(',')
+#         time_label.append(d[0])
+#         client_demand.append(list(map(int, d[1:])))
+#     return time_label, client_name, client_demand
+
+
+# def read_server_bandwidth() -> Tuple[List[str], List[int]]:
+#     fname = IOFile.bandwidth
+#     with open(fname) as f:
+#         data = f.read().splitlines()
+#     server_name = []
+#     server_bandwidth = []
+#     for each in data[1:]:
+#         a, b = each.split(',')
+#         server_name.append(a)
+#         server_bandwidth.append(int(b))
+#     return server_name, server_bandwidth
+
+
+# def read_qos() -> Tuple[List[str], List[str], List[List[int]]]:
+#     fname = IOFile.qos
+#     with open(fname) as f:
+#         data = f.read().splitlines()
+#     client_name = data[0].split(',')[1:]
+#     server_name = []
+#     qos_array = []
+#     for each in data[1:]:
+#         d = each.split(',')
+#         server_name.append(d[0])
+#         qos_array.append(list(map(int, d[1:])))
+#     return client_name, server_name, qos_array
+
+
+# def read_qos_limit() -> int:
+#     fname = IOFile.config
+#     with open(fname) as f:
+#         data = f.read().splitlines()
+#     qos_lim = int(data[1].split('=')[1])
+#     return qos_lim
+
+
+# def get_input_data():
+#     global cname, sname, qos, qos_lim, bandwidth, client_demand, time_label, cname_map, sname_map
+#     cname, sname, qos = read_qos()
+#     for idx, name in enumerate(cname):
+#         cname_map[name] = idx
+#     for idx, name in enumerate(sname):
+#         sname_map[name] = idx
+#     qos = np.array(qos)
+#     time_label, client_name, client_demand = read_demand()
+#     client_idx_list = []
+#     for c in cname:
+#         idx = client_name.index(c)
+#         client_idx_list.append(idx)
+#     client_demand = np.array(client_demand)[:, client_idx_list]
+#     server_name, server_bandwidth = read_server_bandwidth()
+#     bandwidth = []
+#     for s in sname:
+#         idx = server_name.index(s)
+#         bandwidth.append(server_bandwidth[idx])
+#     qos_lim = read_qos_limit()
+#     bandwidth = np.array(bandwidth)
+
+def get_available_sites():
+    global qos, qos_lim
+    available_sites = {}
+    for c in cname:
+        ci = cname_map[c]
+        available_sites[c] = []
+        for s in sname:
+            si = sname_map[s]
+            if qos[si][ci] < qos_lim:
+                available_sites[c].append(s)
+    return available_sites
 
 def read_demand() -> Tuple[List[str], List[int]]:
     fname = IOFile.demand
@@ -33,7 +118,6 @@ def read_demand() -> Tuple[List[str], List[int]]:
         client_demand.append(list(map(int, d[1:])))
     return time_label, client_name, client_demand
 
-
 def read_server_bandwidth() -> Tuple[List[str], List[int]]:
     fname = IOFile.bandwidth
     with open(fname) as f:
@@ -45,7 +129,6 @@ def read_server_bandwidth() -> Tuple[List[str], List[int]]:
         server_name.append(a)
         server_bandwidth.append(int(b))
     return server_name, server_bandwidth
-
 
 def read_qos() -> Tuple[List[str], List[str], List[List[int]]]:
     fname = IOFile.qos
@@ -60,7 +143,6 @@ def read_qos() -> Tuple[List[str], List[str], List[List[int]]]:
         qos_array.append(list(map(int, d[1:])))
     return client_name, server_name, qos_array
 
-
 def read_qos_limit() -> int:
     fname = IOFile.config
     with open(fname) as f:
@@ -70,7 +152,7 @@ def read_qos_limit() -> int:
 
 
 def get_input_data():
-    global cname, sname, qos, qos_lim, bandwidth, client_demand, time_label, cname_map, sname_map
+    global cname, sname, qos, qos_lim, bandwidth, client_demand, time_label
     cname, sname, qos = read_qos()
     for idx, name in enumerate(cname):
         cname_map[name] = idx
@@ -90,18 +172,6 @@ def get_input_data():
         bandwidth.append(server_bandwidth[idx])
     qos_lim = read_qos_limit()
     bandwidth = np.array(bandwidth)
-
-def get_available_sites():
-    global qos, qos_lim
-    available_sites = {}
-    for c in cname:
-        ci = cname_map[c]
-        available_sites[c] = []
-        for s in sname:
-            si = sname_map[s]
-            if qos[si][ci] < qos_lim:
-                available_sites[c].append(s)
-    return available_sites
 
 
 class Resolver():
@@ -219,7 +289,7 @@ def make_skew_plan(rs):
                     skew_site.add(s)
             ci += 1
         skew_by_time[t] = skew_site
-    print(rs.skew_record)
+    # print(rs.skew_record)
     for t in range(rs.T):
         # print(t)
         if len(skew_by_time[t]) == 0:
@@ -238,7 +308,7 @@ def make_skew_plan(rs):
                                 # print(cii, s, remained_bandwidth)
                         skew_site.add(s)
                 ci += 1
-    print(rs.skew_record)
+    # print(rs.skew_record)
 
 
 def make_average_plan(rs):

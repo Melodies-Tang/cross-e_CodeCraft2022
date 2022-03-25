@@ -70,7 +70,8 @@ def writeOutput(output_path, assigns):
         for client, client_assign in assign.items():
             cur = client + ":"
             for site, band in client_assign.items():
-                cur += "<{},{}>,".format(site, band)
+                if band > 0:
+                    cur += "<{},{}>,".format(site, band)
             if cur[-1] == ",":
                 cur = cur[:-1]
             output.append(cur)

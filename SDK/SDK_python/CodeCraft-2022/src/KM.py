@@ -1,4 +1,7 @@
 import time as tt
+import sys
+
+sys.setrecursionlimit(1000000)
 
 def findPath(x, N, weights, optimal_match, label_x, label_y, visit_x, visit_y, slack):
     visit_x[x] = True
@@ -54,38 +57,56 @@ def evaluate(solution, demands, site_bandwidth, site_client, client_site):
     time_site = KM(evaluation)  # time_site[i]: the site(idx) that time_i use the max
     end  = tt.time()
     print(end - start)
+    print(time_site)
+
+    # time_site = []
+    # for i in range(T // N):
+    #     start = i * N
+    #     end  = (i + 1)* N
+    #     weights_mat = evaluation[start:end][start:end]
+    #     time_site.extend(KM(weights_mat))
+    #     end  = tt.time()
+
+    # weights_mat = [[0 for i in range(N)] for j in range(N)]
+    # start = (T // N + 1) * N
+    # end  = T
+    # weights_mat = evaluation[start:end][start:end]
+    # time_site.extend(KM(weights_mat))
+    # print(time_site)
+
     # reassign
     for time in range(T):
         add_to_site_idx = time_site[time]
         add_to_site_name = site_name[add_to_site_idx % N]
         potential = evaluation[add_to_site_idx][time]
         # if potential is tiny, discard it
-        site_chances[add_to_site_idx % N] -= 1
+        # site_chances[add_to_site_idx % N] -= 1
         client_cnt = len(site_client[add_to_site_name])
         for i, client in enumerate(site_client[add_to_site_name]):
             client_avg_add = potential // (client_cnt - i)
-            current_assign = time_client_site_band[time][client].get(add_to_site_name, 0)
+            current_assign = time_client_site_band[time][client].get(add_to_site_name, 0)  # to add_to_site
             add = min(client_avg_add, demands[time][client] - current_assign)
             time_client_site_band[time][client][add_to_site_name] = current_assign + add
             site_time_used[add_to_site_name][time] += add
             potential -= add
-            relative_site_cnt = len(time_client_site_band[time][client]) - 1
-            j = 0
-            del_site = []
-            for site, band in time_client_site_band[time][client].items():
-                if site != add_to_site_name:
-                    site_avg_minus = add // (relative_site_cnt - j)
-                    if site_avg_minus * (relative_site_cnt - j) < add:
-                        site_avg_minus += 1
-                    minus = min(site_avg_minus, band)
-                    time_client_site_band[time][client][site] -= minus
-                    if time_client_site_band[time][client][site] == 0:
-                        del_site.append(site)
-                    site_time_used[site][time] -= minus
-                    add -= minus
-                    j += 1
-            for site in del_site:
-                time_client_site_band[time][client].pop(site)
+            while add > 0:
+                relative_site_cnt = len(time_client_site_band[time][client]) - 1
+                j = 0
+                del_site = []
+                for site, band in time_client_site_band[time][client].items():
+                    if site != add_to_site_name:
+                        site_avg_minus = add // (relative_site_cnt - j)
+                        if site_avg_minus * (relative_site_cnt - j) < add:
+                            site_avg_minus += 1
+                        minus = min(site_avg_minus, band)
+                        time_client_site_band[time][client][site] -= minus
+                        if time_client_site_band[time][client][site] == 0:
+                            del_site.append(site)
+                        site_time_used[site][time] -= minus
+                        add -= minus
+                        j += 1
+                for site in del_site:
+                    time_client_site_band[time][client].pop(site)
 
     total_cost = 0
     for site, usage in site_time_used.items():

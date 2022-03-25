@@ -81,7 +81,8 @@ if __name__ == '__main__':
     times = len(demands)
 
     POS_95 = math.ceil(times * 0.95) - 1  # index start by 0
-    special_num = times - POS_95 - 1  # TRY
+    # special_num = times - POS_95 - 1  # TRY
+    special_num = 1
 
     used = dict()  # site:time(index):total_usage, for sake of calculating COST
     for site in site_names:
@@ -115,9 +116,20 @@ if __name__ == '__main__':
     assigns = [[time_names[i], assigns[i]] for i in range(times)]
     assigns.sort(key=sortByTime)
     assigns = [assigns[i][1] for i in range(times)]
-    site_chances = [special_num for i in range(N)]
-    solution = [assigns, total_cost, used, POS_95, site_chances]
-    new_solution = [assigns, total_cost, used, POS_95, site_chances]  # HOW TO DEEPCOPY???
-    new_cost = KM.evaluate(new_solution, demands, site_bandwidth, site_client, client_site)
 
+    site_chances = [1 for i in range(N)]
+
+    solution = [assigns, total_cost, used, POS_95, site_chances]
+    # # print(total_cost)
+    for i in range(special_num):
+    # for i in range(2):
+        new_solution = [assigns, total_cost, used, POS_95, site_chances]  # HOW TO DEEPCOPY???
+        new_cost = KM.evaluate(new_solution, demands, site_bandwidth, site_client, client_site)
+        print(new_cost)
+
+    # for i in range(1):
+    #     new_cost = KM.evaluate(solution, demands, site_bandwidth, site_client, client_site)
+    #     print(new_cost)
+
+    # print(used)
     IO.writeOutput(output_path, new_solution[0])
